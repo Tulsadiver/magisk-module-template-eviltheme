@@ -30,6 +30,8 @@ then 
   SYSTEM=/system/system
 else  
   isABDevice=false
+  SYSTEM=/system
+  
 fi
 
 ##########################################################################################
