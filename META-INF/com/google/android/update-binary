@@ -265,10 +265,8 @@ ui_print "******************************"
 
 ui_print "- Mounting /system(ro), /cache, /data"
 mount -o ro /system 2>/dev/null
-if $isABDevice
-then
-  mount -o rw,remount /system 2>/dev/null
-fi
+
+mount -o rw,remount /system 2>/dev/null
 mount /cache 2>/dev/null
 mount /data 2>/dev/null
 
@@ -323,8 +321,8 @@ fi
 # Useful if you are creating Android version / platform dependent mods
 
 if is_mounted /data; then
-  IMG=/data/adb/$IMGNAME
-  if [ ! -f "/data/adb/magisk.img" ]; then
+  IMG=/data/$IMGNAME
+  if [ ! -f "/data/magisk.img" ]; then
     ui_print "! Magisk is not installed!"
     ui_print "! Magisk is required for this mod!"
     exit 1
@@ -359,6 +357,10 @@ else
 fi
 
 mount_image $IMG $MOUNTPATH
+if ! is_mounted $MOUNTPATH; then
+  ui_print "! $IMG mount failed... abort"
+  exit 1
+fi
 
 # Create mod paths
 rm -rf $MODPATH 2>/dev/null
@@ -401,14 +403,16 @@ else
   make_ext4fs -l ${SIZE}M -a /magisk -S $INSTALLER/common/file_contexts_image $IMG
 fi
 mount_image $IMG $MOUNTPATH
+if (! is_mounted $MOUNTPATH); then
+  ui_print "! $IMG mount failed... abort"
+  exit 1
+fi
 
 # Copy Patched Files to Magisk Module
 ui_print "- Copying Patched Files to Magisk Module"
 cp -rf /tmp/magisk_tmp/* $MODPATH
 cp -rf /tmp/magisk_tmp/* /data/tmp/mysystem
 rm -rf /tmp/magisk_tmp
-rm -rf /data/tmp/magisk
-rm -rf /data/tmp/magiskmaker
 
 ##########################################################################################
 
