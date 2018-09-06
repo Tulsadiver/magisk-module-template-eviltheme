@@ -18,9 +18,21 @@ datetime=$($bb date +"%m%d%y-%H%M%S")
 OUTFD=$(ps | grep -v "grep" | grep -o -E "update_binary(.*)" | cut -d " " -f 3);
 [[ $OUTFD != "" ]] || OUTFD=$(ps | grep -v "grep" | grep -o -E "updater(.*)" | cut -d " " -f 3);
 
+SYSTEM=/system
+
+ABDeviceCheck=$(cat /proc/cmdline | grep slot_suffix | wc -l)
+if [ $ABDeviceCheck -gt 0 ];
+then
+  isABDevice=true
+  SLOT=$(for i in `cat /proc/cmdline`; do echo $i | grep slot_suffix | awk -F "=" '{print $2}';done)
+  SYSTEM=/system/system
+else
+  isABDevice=false
+fi
+
 # ROM checks
 getpropval() {
-	acquiredValue=`cat /system/build.prop | grep "^$1=" | cut -d"=" -f2 | tr -d '\r '`
+	acquiredValue=`cat /$SYSTEM/build.prop | grep "^$1=" | cut -d"=" -f2 | tr -d '\r '`
 	echo "$acquiredValue"
 }
 platformString=`getpropval "ro.build.version.release"`
@@ -59,11 +71,13 @@ dir() {
 }
 
 theme(){
-	path="$1/$2" # system/framework
+	pathsys="$SYSTEM/$2" # system/priv-app
+	path="$1/$2"
+	applypath="apply/$path"
 	path_magisk="/tmp/magisk_tmp"
 
 	cd "$vrroot/$path/"
-	dir "$vrroot/apply/$path"
+	dir "$vrroot/$applypath"
 
 	for f in *.apk; do
 		cd "$f"
@@ -71,78 +85,80 @@ theme(){
 		# Copy APK
 		if [ "$lollipop" -eq "1" ]; then
 			appPath="$(friendlyname $f)/$f"
-			dir "$vrroot/apply/$path/$(friendlyname $f)"
+			dir "$vrroot/$applypath/$(friendlyname $f)"
       dir "$path_magisk/$path/$(friendlyname $f)"
-			cp "/$path/$appPath" "$vrroot/apply/$path/$(friendlyname $f)/"
+			cp "/$pathsys/$appPath" "$vrroot/$applypath/$(friendlyname $f)/"
 		else
-			cp "/$path/$f" "$vrroot/apply/$path/"
+			cp "/$pathsys/$f" "$vrroot/$applypath/"
 			appPath="$f"
 		fi
 
 		# Delete files in APK, if any
-		mv "$vrroot/apply/$path/$appPath" "$vrroot/apply/$path/$appPath.zip"
+		mv "$vrroot/$applypath/$appPath" "$vrroot/$applypath/$appPath.zip"
 		if [ -e "./delete.list" ]; then
 			readarray -t array < ./delete.list
 			for j in ${array[@]}; do
-				/tmp/engine/zip -d "$vrroot/apply/$path/$appPath.zip" "$j"
+				/tmp/engine/zip -d "$vrroot/$applypath/$appPath.zip" "$j"
 			done
 			rm -f ./delete.list
 		fi
 
 		# Theme APK
-		/tmp/engine/zip -r "$vrroot/apply/$path/$appPath.zip" ./*
-		mv "$vrroot/apply/$path/$appPath.zip" "$vrroot/apply/$path/$appPath"
+		/tmp/engine/zip -r "$vrroot/$applypath/$appPath.zip" ./*
+		mv "$vrroot/$applypath/$appPath.zip" "$vrroot/$applypath/$appPath"
 
 		# Refresh bytecode if necessary
 		checkdex "$2" "$f"
 
 		# Finish up
-		$bb cp -f $vrroot/apply/$path/$appPath $path_magisk/$path/$appPath
+		$bb cp -f $vrroot/$applypath/$appPath $path_magisk/$path/$appPath
 		chmod 644 $path_magisk/$path/$appPath
 		cd "$vrroot/$path/"
 	done
 }
 
 theme_framework(){
-	path="$1/$2" # system/framework
+	pathsys="$SYSTEM/$2" # system/priv-app
+	path="$1/$2"
+	applypath="apply/$path"
 	path_magisk="/tmp/magisk_tmp"
 
 	cd "$vrroot/$path/"
-	dir "$vrroot/apply/$path"
+	dir "$vrroot/$applypath"
 
 	for f in *.apk; do
 		cd "$f"
 
 		# Copy APK
 		if [ "$lollipop" -eq "1" ]; then
-			appPath="$(friendlyname $f)/$f"
-			dir "$vrroot/apply/$path/$(friendlyname $f)"
-      dir "$path_magisk/$path/$(friendlyname $f)"
-			cp "/$path/$appPath" "$vrroot/apply/$path/$(friendlyname $f)/"
+			appPath="$f"
+			dir "$vrroot/apply/$path"
+      dir "$path_magisk/$path"
+			cp "/$pathsys/$appPath" "$vrroot/$applypath"
 		else
-			cp "/$path/$f" "$vrroot/apply/$path/"
+			cp "/$pathsys/$appPath" "$vrroot/$applypath/"
 			appPath="$f"
 		fi
 
 		# Delete files in APK, if any
-		mv "$vrroot/apply/$path/$appPath" "$vrroot/apply/$path/$appPath.zip"
+		mv "$vrroot/$applypath/$appPath" "$vrroot/$applypath/$appPath.zip"
 		if [ -e "./delete.list" ]; then
 			readarray -t array < ./delete.list
 			for j in ${array[@]}; do
-				/tmp/engine/zip -d "$vrroot/apply/$path/$appPath.zip" "$j"
+				/tmp/engine/zip -d "$vrroot/$applypath/$appPath.zip" "$j"
 			done
 			rm -f ./delete.list
 		fi
 
 		# Theme APK
-		/tmp/engine/zip -r "$vrroot/apply/$path/$appPath.zip" ./*
-		mv "$vrroot/apply/$path/$appPath.zip" "$vrroot/apply/$path/$appPath"
+		/tmp/engine/zip -r "$vrroot/$applypath/$appPath.zip" ./*
+		mv "$vrroot/$applypath/$appPath.zip" "$vrroot/$applypath/$appPath"
 
 		# Refresh bytecode if necessary
 		checkdex "$2" "$f"
 
 		# Finish up
-		$bb cp -f $vrroot/apply/$path/$appPath $path_magisk/$path/$appPath
+		$bb cp -f $vrroot/$applypath/$appPath $path_magisk/$path/$appPath
 		chmod 644 $path_magisk/$path/$appPath
 		cd "$vrroot/$path/"
 	done
@@ -176,7 +192,7 @@ fi
 
 # /system/framework
 if [ "$framework" -eq "1" ]; then
-	theme "system" "framework"
+	theme_framework "system" "framework"
 fi
 
 # /system/framework/samsung-framework-res
@@ -187,5 +203,6 @@ fi
 # Cleanup
 $bb rm -fR /data/tmp/eviltheme
 $bb rm -fR /tmp/engine
+$bb rm -fR /data/tmp/system
 
 exit 0
