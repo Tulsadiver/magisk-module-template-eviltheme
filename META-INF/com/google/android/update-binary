@@ -321,8 +321,8 @@ fi
 # Useful if you are creating Android version / platform dependent mods
 
 if is_mounted /data; then
-  IMG=/data/$IMGNAME
-  if [ ! -f "/data/magisk.img" ]; then
+  IMG=/data/adb/$IMGNAME
+  if [ ! -f "/data/adb/magisk.img" ]; then
     ui_print "! Magisk is not installed!"
     ui_print "! Magisk is required for this mod!"
     exit 1
