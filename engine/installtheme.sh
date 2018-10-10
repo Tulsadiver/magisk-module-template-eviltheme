@@ -10,7 +10,7 @@
 #
 # Portions are copyright Spannaa@XDA 2015.
 #
-# Modified by djb77 in 2017 to use with Magisk Module Template
+# Modified by djb77 in 2017 to use with Magisk Module Template.
 
 # Declare busybox, output file descriptor, timecapture, and logging mechanism
 bb="/tmp/engine/busybox"
